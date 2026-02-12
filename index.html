@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Epsteins Kinder</title>
-
 <style>
 * { box-sizing: border-box; }
 
@@ -86,7 +85,6 @@ li:hover {
 .display-none { display: none; }
 </style>
 </head>
-
 <body>
 
 <div class="container">
@@ -105,17 +103,12 @@ li:hover {
     <button id="floating-new-child">Neues Kind</button>
 </div>
 
-<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-
 const SUPABASE_URL = "https://ntrabmhjzjatzimxeypx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50cmFibWhqemphdHppbXhleXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4OTk0NDUsImV4cCI6MjA4NjQ3NTQ0NX0.XHzCdyLG_wp-wzxQC9ywK4mSVKKX_6GnezEdjtCjMZw";
 
-const supabase = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let childsCounter = 1;
 let childsChildsMap = new Map();
@@ -129,7 +122,7 @@ function init(){
     document.getElementById('floating-new-child')
         .addEventListener('click', function(e){
             e.stopPropagation();
-            addNewChild(e);
+            addNewChild();
         });
 
     loadFromCloud();
@@ -151,31 +144,27 @@ function createNode(text, color){
 }
 
 function addNewChild(){
-    document.getElementById('click-note')
-        .classList.add('display-none');
-
+    document.getElementById('click-note').classList.add('display-none');
     let epLst = document.getElementById('eplst');
     let newChild = createNode("Epstein " + childsCounter, getRandomColor());
     childsCounter++;
     epLst.appendChild(newChild);
-
     saveToCloud();
 }
 
 function addChildsChild(e){
     e.stopPropagation();
-
-    let parent = e.currentTarget;
+    const parent = e.currentTarget;
     let childIndex = childsChildsMap.get(parent);
 
-    let newChildList = parent.querySelector('ul');
+    let newChildList = parent.querySelector(':scope > ul');
     if (!newChildList){
         newChildList = document.createElement('ul');
         parent.appendChild(newChildList);
     }
 
-    let newText = parent.firstChild.textContent + "-" + childIndex;
-    let newChild = createNode(newText, parent.dataset.color);
+    const newText = parent.textContent.split('\n')[0] + "-" + childIndex; // stabiler
+    const newChild = createNode(newText, parent.dataset.color);
     newChildList.appendChild(newChild);
 
     childsChildsMap.set(parent, childIndex + 1);
@@ -185,29 +174,17 @@ function addChildsChild(e){
 
 function resetList(e){
     e.stopPropagation();
-
     document.getElementById('eplst').innerHTML = "";
     childsCounter = 1;
     childsChildsMap.clear();
-
-    document.getElementById('click-note')
-        .classList.remove('display-none');
-
+    document.getElementById('click-note').classList.remove('display-none');
     saveToCloud();
 }
 
 /* ---------------- CLOUD ---------------- */
-
 async function saveToCloud(){
-    const treeData = {
-        counter: childsCounter,
-        tree: serializeTree()
-    };
-
-    await supabase
-        .from('tree')
-        .update({ data: treeData })
-        .eq('id', 1);
+    const treeData = { counter: childsCounter, tree: serializeTree() };
+    await supabase.from('tree').upsert({id:1, data:treeData});
 }
 
 async function loadFromCloud(){
@@ -224,36 +201,21 @@ async function loadFromCloud(){
     rebuildTree(saved.tree || []);
 
     if (saved.tree && saved.tree.length > 0){
-        document.getElementById('click-note')
-            .classList.add('display-none');
+        document.getElementById('click-note').classList.add('display-none');
     }
 }
 
 function serializeTree(){
     const root = document.getElementById('eplst');
     const nodes = [];
-
-    root.querySelectorAll(':scope > li').forEach(li => {
-        nodes.push(serializeNode(li));
-    });
-
+    root.querySelectorAll(':scope > li').forEach(li => nodes.push(serializeNode(li)));
     return nodes;
 }
 
 function serializeNode(li){
-    const nodeData = {
-        text: li.firstChild.textContent,
-        color: li.dataset.color,
-        children: []
-    };
-
+    const nodeData = { text: li.textContent.split('\n')[0], color: li.dataset.color, children: [] };
     const childUl = li.querySelector(':scope > ul');
-    if (childUl){
-        childUl.querySelectorAll(':scope > li').forEach(child => {
-            nodeData.children.push(serializeNode(child));
-        });
-    }
-
+    if (childUl) childUl.querySelectorAll(':scope > li').forEach(c => nodeData.children.push(serializeNode(c)));
     return nodeData;
 }
 
@@ -261,28 +223,20 @@ function rebuildTree(tree){
     const root = document.getElementById('eplst');
     root.innerHTML = "";
     childsChildsMap.clear();
-
-    tree.forEach(node => {
-        root.appendChild(rebuildNode(node));
-    });
+    tree.forEach(node => root.appendChild(rebuildNode(node)));
 }
 
 function rebuildNode(nodeData){
     const li = createNode(nodeData.text, nodeData.color);
-
     if (nodeData.children && nodeData.children.length > 0){
         const ul = document.createElement('ul');
-        nodeData.children.forEach(child => {
-            ul.appendChild(rebuildNode(child));
-        });
+        nodeData.children.forEach(child => ul.appendChild(rebuildNode(child)));
         li.appendChild(ul);
     }
-
     return li;
 }
 
 window.addEventListener('load', init);
-
 </script>
 </body>
 </html>
