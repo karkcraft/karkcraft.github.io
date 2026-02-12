@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Epsteins Kinder</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #eef2f7, #d9e4f5);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-weight: 600;
+        }
+
+        #click-note {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        #reset-btn {
+            background: #ff5c5c;
+            color: white;
+        }
+
+        #reset-btn:hover {
+            background: #e04848;
+            transform: translateY(-2px);
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+
+        li {
+            display: block;
+            cursor: pointer;
+            padding: 8px 12px;
+            margin: 6px 0;
+            border-radius: 10px;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        li:hover {
+            transform: translateX(4px);
+            box-shadow: 0 5px 12px rgba(0,0,0,0.1);
+        }
+
+        /* Floating Button */
+        .sidebar {
+            position: fixed;
+            right: 25px;
+            bottom: 25px;
+        }
+
+        .sidebar button {
+            background: #4a7dfc;
+            color: white;
+            font-size: 15px;
+            padding: 14px 20px;
+            border-radius: 50px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        .sidebar button:hover {
+            background: #345ee8;
+            transform: translateY(-3px);
+        }
+
+        .display-none {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="card">
+            <h1>Epsteins Kinder</h1>
+            <p id="click-note">(Click anywhere to start)</p>    
+            <button id="reset-btn">Reset</button>
+        </div>
+
+        <div class="card">
+            <ul id="eplst"></ul>
+        </div>
+
+    </div>
+
+    <!-- Floating Button -->
+    <div class="sidebar">
+        <button id="floating-new-child">Neues Kind</button>
+    </div>
+
+    <script>
+        let childsCounter = 1;
+        let childsChildsMap = new Map();
+
+        function init(){
+            document.addEventListener('click', addNewChild);
+            document.getElementById('reset-btn')
+                .addEventListener('click', resetList);
+
+            document.getElementById('floating-new-child')
+                .addEventListener('click', function(e){
+                    e.stopPropagation();
+                    addNewChild(e);
+                });
+        }
+
+        // Zufällige Pastellfarbe
+        function getRandomColor(){
+            const hue = Math.floor(Math.random() * 360);
+            return `hsl(${hue}, 70%, 80%)`;
+        }
+
+        // Neues Haupt-Element
+        function addNewChild(e){
+            document.getElementById('click-note')
+                .classList.add('display-none');
+
+            let epLst = document.getElementById('eplst');
+            let newChild = document.createElement('li');
+
+            newChild.textContent = "Epstein " + childsCounter;
+            childsCounter++;
+
+            let familyColor = getRandomColor();
+            newChild.style.backgroundColor = familyColor;
+            newChild.dataset.color = familyColor;
+
+            newChild.addEventListener('click', addChildsChild);
+
+            childsChildsMap.set(newChild, 1);
+            epLst.appendChild(newChild);
+        }
+
+        function addChildsChild(e){
+            e.stopPropagation();
+
+            let parent = e.currentTarget;
+            let childIndex = childsChildsMap.get(parent);
+
+            let newChildList = parent.querySelector('ul');
+
+            if (!newChildList){
+                newChildList = document.createElement('ul');
+                parent.appendChild(newChildList);
+            }
+
+            let newChild = document.createElement('li');
+            newChild.textContent = parent.firstChild.textContent + "-" + childIndex;
+
+            let familyColor = parent.dataset.color;
+            newChild.style.backgroundColor = familyColor;
+            newChild.dataset.color = familyColor;
+
+            newChild.addEventListener('click', addChildsChild);
+
+            newChildList.appendChild(newChild);
+
+            childsChildsMap.set(parent, childIndex + 1);
+            childsChildsMap.set(newChild, 1);
+        }
+
+        function resetList(e){
+            e.stopPropagation();
+
+            let epList = document.getElementById('eplst');
+            epList.innerHTML = "";
+
+            childsCounter = 1;
+            childsChildsMap.clear();
+
+            document.getElementById('click-note')
+                .classList.remove('display-none');
+        }
+
+        window.addEventListener('load', init);
+    </script>
+
+</body>
+</html>
