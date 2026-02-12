@@ -130,9 +130,11 @@
     <script>
         let childsCounter = 1;
         let childsChildsMap = new Map();
+        const STORAGE_KEY = "epstein_tree";
 
         function init(){
             document.addEventListener('click', addNewChild);
+
             document.getElementById('reset-btn')
                 .addEventListener('click', resetList);
 
@@ -141,33 +143,26 @@
                     e.stopPropagation();
                     addNewChild(e);
                 });
+
+            loadFromStorage();
         }
 
-        // Zufällige Pastellfarbe
         function getRandomColor(){
             const hue = Math.floor(Math.random() * 360);
             return `hsl(${hue}, 70%, 80%)`;
         }
 
-        // Neues Haupt-Element
         function addNewChild(e){
             document.getElementById('click-note')
                 .classList.add('display-none');
 
             let epLst = document.getElementById('eplst');
-            let newChild = document.createElement('li');
+            let newChild = createNode("Epstein " + childsCounter, getRandomColor());
 
-            newChild.textContent = "Epstein " + childsCounter;
             childsCounter++;
-
-            let familyColor = getRandomColor();
-            newChild.style.backgroundColor = familyColor;
-            newChild.dataset.color = familyColor;
-
-            newChild.addEventListener('click', addChildsChild);
-
-            childsChildsMap.set(newChild, 1);
             epLst.appendChild(newChild);
+
+            saveToStorage();
         }
 
         function addChildsChild(e){
@@ -183,19 +178,28 @@
                 parent.appendChild(newChildList);
             }
 
-            let newChild = document.createElement('li');
-            newChild.textContent = parent.firstChild.textContent + "-" + childIndex;
-
-            let familyColor = parent.dataset.color;
-            newChild.style.backgroundColor = familyColor;
-            newChild.dataset.color = familyColor;
-
-            newChild.addEventListener('click', addChildsChild);
+            let newText = parent.firstChild.textContent + "-" + childIndex;
+            let newChild = createNode(newText, parent.dataset.color);
 
             newChildList.appendChild(newChild);
 
             childsChildsMap.set(parent, childIndex + 1);
-            childsChildsMap.set(newChild, 1);
+
+            saveToStorage();
+        }
+
+        function createNode(text, color){
+            let li = document.createElement('li');
+            li.textContent = text;
+
+            li.style.backgroundColor = color;
+            li.dataset.color = color;
+
+            li.addEventListener('click', addChildsChild);
+
+            childsChildsMap.set(li, 1);
+
+            return li;
         }
 
         function resetList(e){
@@ -207,12 +211,95 @@
             childsCounter = 1;
             childsChildsMap.clear();
 
+            localStorage.removeItem(STORAGE_KEY);
+
             document.getElementById('click-note')
                 .classList.remove('display-none');
         }
 
+        /* --------------------------
+        STORAGE
+        ---------------------------*/
+
+        function saveToStorage(){
+            const treeData = serializeTree();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                counter: childsCounter,
+                tree: treeData
+            }));
+        }
+
+        function loadFromStorage(){
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (!saved) return;
+
+            const data = JSON.parse(saved);
+
+            childsCounter = data.counter || 1;
+
+            if (data.tree && data.tree.length > 0){
+                document.getElementById('click-note')
+                    .classList.add('display-none');
+
+                rebuildTree(data.tree);
+            }
+        }
+
+        function serializeTree(){
+            const root = document.getElementById('eplst');
+            const nodes = [];
+
+            root.querySelectorAll(':scope > li').forEach(li => {
+                nodes.push(serializeNode(li));
+            });
+
+            return nodes;
+        }
+
+        function serializeNode(li){
+            const nodeData = {
+                text: li.firstChild.textContent,
+                color: li.dataset.color,
+                children: []
+            };
+
+            const childUl = li.querySelector(':scope > ul');
+            if (childUl){
+                childUl.querySelectorAll(':scope > li').forEach(child => {
+                    nodeData.children.push(serializeNode(child));
+                });
+            }
+
+            return nodeData;
+        }
+
+        function rebuildTree(tree){
+            const root = document.getElementById('eplst');
+            root.innerHTML = "";
+            childsChildsMap.clear();
+
+            tree.forEach(node => {
+                root.appendChild(rebuildNode(node));
+            });
+        }
+
+        function rebuildNode(nodeData){
+            const li = createNode(nodeData.text, nodeData.color);
+
+            if (nodeData.children && nodeData.children.length > 0){
+                const ul = document.createElement('ul');
+
+                nodeData.children.forEach(child => {
+                    ul.appendChild(rebuildNode(child));
+                });
+
+                li.appendChild(ul);
+            }
+
+            return li;
+        }
+
         window.addEventListener('load', init);
     </script>
-
 </body>
 </html>
